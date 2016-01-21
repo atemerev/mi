@@ -1,0 +1,37 @@
+package com.temerev.mi.analytics
+
+import java.time.{Duration, Instant}
+
+import com.miriamlaurel.fxcore.market.Quote
+import com.miriamlaurel.fxcore._
+import org.scalatest.FunSuite
+
+class WindowTest extends FunSuite {
+
+  private val startTs = Instant.ofEpochMilli(1453199819110L)
+  private val startQuote = Quote(EURUSD, Some(1), Some(10), startTs)
+  private val quotes = List(
+    startQuote,
+    startQuote.copy(bid = Some(2), ask = Some(8), timestamp = startTs.plusSeconds(10)),
+    startQuote.copy(bid = Some(2), ask = Some(8), timestamp = startTs.plusSeconds(20)),
+    startQuote.copy(bid = Some(3), ask = Some(7), timestamp = startTs.plusSeconds(25)),
+    startQuote.copy(bid = Some(4), ask = Some(6), timestamp = startTs.plusSeconds(40)),
+    startQuote.copy(bid = Some(5), ask = Some(8), timestamp = startTs.plusSeconds(60)),
+    startQuote.copy(bid = Some(5), ask = Some(5), timestamp = startTs.plusSeconds(70))
+  )
+  val empty = Window(period = Duration.ofMinutes(1), maxGap = Duration.ofMinutes(1))
+  val window = quotes.foldLeft(empty)((w: Window, q: Quote) => w.addQuote(q))
+
+  test("Quotes time elimination") {
+    assert(window.size == 5, "; window size is incorrect")
+  }
+
+  test("Min/max elimination") {
+    assert(window.min == BigDecimal(2))
+    assert(window.max == BigDecimal(8))
+    val newWindow = window.addQuote(startQuote.copy(bid = Some(4), ask = Some(7), timestamp = startTs.plusSeconds(80)))
+    assert(newWindow.min == BigDecimal(3))
+    assert(newWindow.max == BigDecimal(7))
+  }
+
+}
