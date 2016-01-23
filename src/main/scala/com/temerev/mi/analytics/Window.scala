@@ -3,6 +3,7 @@ package com.temerev.mi.analytics
 import java.time.Duration
 
 import com.miriamlaurel.fxcore.market.Quote
+import com.miriamlaurel.fxcore._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
@@ -27,6 +28,8 @@ case class Window(period: Duration,
   lazy val min: BigDecimal = minQueue.head.bid.get
 
   lazy val max: BigDecimal = maxQueue.head.ask.get
+
+  lazy val heightPips: BigDecimal = asPips(mainQueue.head, max - min)
 
   @tailrec
   private def trimOld(queue: Queue[Quote]): Queue[Quote] = if (queue.isEmpty || distance(queue).compareTo(period) < 0)
