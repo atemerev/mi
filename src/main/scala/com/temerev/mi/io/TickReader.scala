@@ -26,12 +26,3 @@ class TickReader(val dataDir: File) {
     streams.foldLeft(Iterator[String]())(_ ++ _).map(Snapshot.fromCsv)
   }
 }
-
-object TickReader extends App {
-  val reader = new TickReader(new File("/opt/data"))
-  val startDate = LocalDate.of(2015, Month.JULY, 15)
-  val endDate = LocalDate.of(2015, Month.OCTOBER, 23)
-  println("Loading ticks...")
-  val ticks = reader.getTicks(EURUSD, startDate, endDate)
-  println("Loaded: " + ticks.size)
-}
