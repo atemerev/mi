@@ -16,7 +16,7 @@ case class Window(period: Duration,
 
   def addQuote(quote: Quote): Window = {
     val (newMainQueue, newMinQueue, newMaxQueue) = {
-      if (mainQueue.nonEmpty && distance(mainQueue).compareTo(maxGap) > 0) {
+      if (mainQueue.nonEmpty && distance(mainQueue :+ quote).compareTo(maxGap) > 0) {
         (Queue(), Queue(), Queue())
       } else (trimOld(mainQueue :+ quote), trimMin(trimOld(minQueue :+ quote), quote), trimMax(trimOld(maxQueue :+ quote), quote))
     }

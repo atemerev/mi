@@ -2,9 +2,11 @@ package com.temerev.mi.analytics
 
 import java.time.{Duration, Instant}
 
-import com.miriamlaurel.fxcore.market.Quote
+import com.miriamlaurel.fxcore.market.{Snapshot, Quote}
 import com.miriamlaurel.fxcore._
 import org.scalatest.FunSuite
+
+import scala.io.Source
 
 class WindowTest extends FunSuite {
 
@@ -20,6 +22,7 @@ class WindowTest extends FunSuite {
     startQuote.copy(bid = Some(5), ask = Some(5), timestamp = startTs.plusSeconds(70))
   )
   val empty = Window(period = Duration.ofMinutes(1), maxGap = Duration.ofMinutes(1))
+  val emptyHour = Window(period = Duration.ofHours(1), maxGap = Duration.ofHours(1))
   val window = quotes.foldLeft(empty)((w: Window, q: Quote) => w.addQuote(q))
 
   test("Quotes time elimination") {
@@ -32,6 +35,12 @@ class WindowTest extends FunSuite {
     val newWindow = window.addQuote(startQuote.copy(bid = Some(4), ask = Some(7), timestamp = startTs.plusSeconds(80)))
     assert(newWindow.min == BigDecimal(3))
     assert(newWindow.max == BigDecimal(7))
+  }
+
+  test("Many quotes elimination") {
+    val quotes = Source.fromInputStream(classOf[WindowTest].getResourceAsStream("/sample.csv")).getLines().map(Snapshot.fromCsv(_).best)
+    val bigWindow = quotes.foldLeft(emptyHour)((w: Window, q: Quote) => w.addQuote(q))
+    assert(Duration.between(bigWindow.mainQueue.head.timestamp, bigWindow.mainQueue.last.timestamp).compareTo(Duration.ofMinutes(30)) > 0)
   }
 
 }
