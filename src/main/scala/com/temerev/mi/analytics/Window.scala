@@ -1,6 +1,6 @@
 package com.temerev.mi.analytics
 
-import java.time.Duration
+import java.time.{Instant, Duration}
 
 import com.miriamlaurel.fxcore.market.Quote
 import com.miriamlaurel.fxcore._
@@ -16,11 +16,11 @@ case class Window(period: Duration,
 
   def addQuote(quote: Quote): Window = {
     val (newMainQueue, newMinQueue, newMaxQueue) = {
-      if (mainQueue.nonEmpty && distance(mainQueue :+ quote).compareTo(maxGap) > 0) {
+      if (mainQueue.nonEmpty && Duration.between(mainQueue.last.timestamp, quote.timestamp).compareTo(maxGap) > 0) {
         (Queue(), Queue(), Queue())
-      } else (trimOld(mainQueue :+ quote), trimMin(trimOld(minQueue :+ quote), quote), trimMax(trimOld(maxQueue :+ quote), quote))
+      } else (trimOld(mainQueue, quote.timestamp), trimMin(trimOld(minQueue, quote.timestamp), quote), trimMax(trimOld(maxQueue, quote.timestamp), quote))
     }
-    copy(mainQueue = newMainQueue, minQueue = newMinQueue, maxQueue = newMaxQueue)
+    copy(mainQueue = newMainQueue :+ quote, minQueue = newMinQueue :+ quote, maxQueue = newMaxQueue :+ quote)
   }
 
   lazy val size: Int = mainQueue.size
@@ -31,13 +31,16 @@ case class Window(period: Duration,
 
   lazy val heightPips: BigDecimal = asPips(mainQueue.head, max - min)
 
+  lazy val minuteIndex: Int = ((mainQueue.last.timestamp.toEpochMilli / 60000 - 5760) % (7 * 24 * 60)).toInt
+
   @tailrec
-  private def trimOld(queue: Queue[Quote]): Queue[Quote] = if (queue.isEmpty || distance(queue).compareTo(period) < 0)
-    queue else trimOld(queue.tail)
+  private def trimOld(queue: Queue[Quote], now: Instant): Queue[Quote] = if (queue.isEmpty || Duration.between(queue.head.timestamp, now).compareTo(period) < 0)
+    queue else trimOld(queue.tail, now)
 
   @tailrec
   private def trimMin(queue: Queue[Quote], quote: Quote): Queue[Quote] =
-    if (queue.isEmpty || queue.last.bid.get <= quote.bid.get) queue else trimMin(queue.dropRight(1), quote)
+    if (queue.isEmpty || queue.last.bid.get <= quote.bid.get) queue
+    else trimMin(queue.dropRight(1), quote)
 
   @tailrec
   private def trimMax(queue: Queue[Quote], quote: Quote): Queue[Quote] =
